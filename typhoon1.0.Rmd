@@ -1,0 +1,344 @@
+---
+title: "案例二：2411号台风“摩羯”路径图"
+author: "作者：吴清邦、宋攀、徐晨曦"
+date: "浏览时间：`r Sys.Date()`"
+output: html_document
+runtime: shiny
+---
+
+# ★★★***背景***
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+#### 数据来源：[中国天气网](https://typhoon.weather.com.cn/gis/typhoon_full.shtml)
+
+#### 地点：海南省文昌市铺前镇木兰湾
+
+::: {style="text-align: center;"}
+<h1 style="margin: 0; color: blue;">
+
+台风前
+
+</h1>
+:::
+
+::: {style="text-align: center;"}
+![](images/clipboard-472959267.png){height="auto" style="max-"}
+:::
+
+::: {style="text-align: center;"}
+<h1 style="margin: 0; color: blue;">
+
+1.台风后
+
+</h1>
+:::
+
+::: {style="text-align: center;"}
+![](images/74a1af07bb7443bcefcdc226c276355c.png){alt="台风图片" style="max-" width="824"}
+:::
+
+::: {style="text-align: center;"}
+<h1 style="margin: 0; color: blue;">
+
+重现台风路径图
+
+</h1>
+:::
+
+# ***1.台风路径静态图***
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+library(shiny)
+library(leaflet)
+library(readxl)
+library(leaflet.extras)
+
+# 读取 Excel 文件
+file_path <- "D:/吴清邦专业课的资料/数据可视化/2024_2411_摩羯轨迹数据.xlsx"  # 替换为你的文件路径
+data <- read_excel(file_path)
+
+# 替换 "时" 为 ":00" 以添加分钟信息
+formatted_time <- gsub("时", ":00", data$时间)
+data$时间 <- as.POSIXct(formatted_time, format="%Y-%m-%d %H:%M")
+
+# 确保经度和纬度为数值型
+data$经度 <- as.numeric(data$经度)
+data$纬度 <- as.numeric(data$纬度)
+
+# 创建动态地图对象 m_dynamic
+m_dynamic <- leaflet(data) %>%
+  addTiles() %>%
+  addPolylines(lng = ~经度, lat = ~纬度, color = "blue", weight = 2, opacity = 0.7) %>%
+  addCircleMarkers(
+    lng = ~经度, lat = ~纬度, radius = 6, color = "red", fill = TRUE, fillColor = "orange",  # 红色标记
+    popup = ~paste("时间:", 时间, "<br>风速:", 风速, "m/s", "<br>气压:", 中心气压, "Pa","<br>级别:",移速, "级" )
+  )
+m_dynamic
+```
+
+# ***2.台风路径散点图***
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+library(shiny)
+library(ggplot2)
+library(plotly)
+library(readxl)
+
+# 读取 Excel 数据
+file_path <- "D:/吴清邦专业课的资料/数据可视化/2024_2411_摩羯轨迹数据.xlsx"  # 替换为您的文件路径
+data <- read_excel(file_path)
+
+# 替换 "时" 为 ":00" 以添加分钟信息
+formatted_time <- gsub("时", ":00", data$时间)
+data$时间 <- as.POSIXct(formatted_time, format = "%Y-%m-%d %H:%M")
+
+# 确保经度和纬度为数值型
+data$经度 <- as.numeric(data$经度)
+data$纬度 <- as.numeric(data$纬度)
+
+# Shiny UI 界面
+ui <- fluidPage(
+  titlePanel("台风路径散点图"),
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("time_slider", "时间", min = 1, max = nrow(data), value = 1, step = 1),
+      actionButton("play", "开始播放", class = "btn-primary"),
+      actionButton("stop", "停止播放", class = "btn-danger"),
+      numericInput("play_speed", "播放速度（毫秒）", value = 500, min = 100, step = 100)  # 控制播放速度
+    ),
+    mainPanel(
+      plotlyOutput("scatterPlot"),
+      textOutput("current_time"),  # 显示当前时间
+      textOutput("current_speed")  # 显示当前移速
+    )
+  )
+)
+
+# Shiny 服务器逻辑
+server <- function(input, output, session) {
+  
+  # 变量来存储自动播放状态
+  auto_play <- reactiveVal(FALSE)
+  
+  # 渲染散点图
+  output$scatterPlot <- renderPlotly({
+    time_point <- input$time_slider
+    current_data <- data[1:time_point, ]  # 获取当前时间点的数据
+    
+    # 使用 ggplot 创建散点图
+    p <- ggplot(current_data, aes(x = 经度, y = 纬度)) +
+      geom_point(aes(color = 时间), size = 4) +
+      scale_color_continuous(low = "blue", high = "red") +
+      theme_minimal() +
+      labs(title = "台风路径散点图", x = "经度", y = "纬度") +
+      guides(color = "none")  # 去除图例中的时间
+    
+    # 使用 plotly 包将 ggplot 转换为交互式图形
+    ggplotly(p)
+  })
+  
+  # 显示当前时间
+  output$current_time <- renderText({
+    time_point <- input$time_slider
+    current_time <- format(data$时间[time_point], "%Y-%m-%d %H:%M")
+    paste("当前时间: ", current_time)
+  })
+  
+  # 显示当前移速
+  output$current_speed <- renderText({
+    time_point <- input$time_slider
+    current_speed <- data$移速[time_point]  # 获取当前时间点的移速数据
+    paste("当前移速: ", current_speed, "级")
+  })
+  
+  # 触发播放按钮事件
+  observeEvent(input$play, {
+    auto_play(TRUE)  # 启动自动播放
+  })
+  
+  # 触发停止按钮事件
+  observeEvent(input$stop, {
+    auto_play(FALSE)  # 停止自动播放
+  })
+  
+  # 自动播放的逻辑
+  observe({
+    if (auto_play()) {
+      # 使用用户设置的播放速度（通过 numericInput 控制）
+      invalidateLater(input$play_speed, session)  # 使用用户设定的时间间隔（毫秒）
+      
+      # 如果滑动条的当前值小于最大值，则增加
+      if (input$time_slider < nrow(data)) {
+        updateSliderInput(session, "time_slider", value = input$time_slider + 1)
+      } else {
+        updateSliderInput(session, "time_slider", value = 1)  # 到达最后一帧时从头开始
+      }
+    }
+  })
+}
+
+# 启动 Shiny 应用
+shinyApp(ui, server)
+
+```
+
+# ***3.台风路径动态图***
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r centered-map, echo=FALSE, out.width = "80%", fig.align='center'}
+library(shiny)
+library(leaflet)
+library(readxl)
+library(leaflet.extras)
+library(bslib)
+
+# 读取 Excel 文件
+file_path <- "D:/吴清邦专业课的资料/数据可视化/2024_2411_摩羯轨迹数据.xlsx"  # 替换为你的文件路径
+data <- read_excel(file_path)
+
+# 替换 "时" 为 ":00" 以添加分钟信息
+formatted_time <- gsub("时", ":00", data$时间)
+data$时间 <- as.POSIXct(formatted_time, format = "%Y-%m-%d %H:%M")
+
+# 确保经度和纬度为数值型
+data$经度 <- as.numeric(data$经度)
+data$纬度 <- as.numeric(data$纬度)
+
+# 创建动态地图对象
+m_dynamic <- leaflet(data) %>%
+  addTiles() %>%
+  addPolylines(lng = ~经度, lat = ~纬度, color = "red", weight = 2, opacity = 0.7)
+
+# 台风图标的 URL
+typhoon_icon_url <- "D:/台风飓风_爱给网_aigei_com.gif"  # 替换为实际路径
+
+# 创建 Shiny UI 界面
+ui <- fluidPage(
+  theme = bs_theme(
+    bg = "#F8F9F5",          # 设置背景颜色
+    fg = "#333333",          # 设置前景文字颜色
+    primary = "#007bff",     # 设置主要按钮颜色
+    secondary = "#6c757d",   # 设置次要按钮颜色
+    font = "Arial"           # 设置字体
+  ),
+  
+  # 标题
+  titlePanel ( HTML("<div style='text-align: center; color: red; font-size: 24px; font-weight: bold;'>2024年第11号台风“摩羯”将登录我国华南沿海地区</div>")
+  ),
+  
+  leafletOutput("map"),  # 地图输出区域
+  sliderInput("time_slider", "时间", min = 1, max = nrow(data), value = 1, step = 1),  # 时间滑动条
+  actionButton("play", "开始播放", class = "btn-primary"),  # 播放按钮
+  actionButton("stop", "暂停播放", class = "btn-secondary"),  # 暂停按钮
+  actionButton("replay", "重新播放", class = "btn-success"),  # 重新播放按钮
+  # 控制播放速度的输入，分为整数和小数部分
+  numericInput("int_speed", "播放倍速（整数调节）", value = 0, min = 0),  # 整数部分
+  numericInput("dec_speed", "播放倍速（小数调节）", value = 0.1, min = 0.1, step = 0.1)  # 小数部分
+)
+
+# Shiny 服务器逻辑
+server <- function(input, output, session) {
+  
+  # 渲染初始的动态地图
+  output$map <- renderLeaflet({
+    m_dynamic
+  })
+  
+  # 使用 reactiveVal 来存储当前的时间点和播放状态
+  current_time_index <- reactiveVal(1)  # 初始时间点为 1
+  is_playing <- reactiveVal(FALSE)  # 用于控制播放状态
+  
+  # 响应滑动条事件，更新地图内容
+  observe({
+    time_point <- input$time_slider  # 获取当前滑动条的值
+    current_data <- data[time_point, ]  # 只获取当前时间点的数据
+    
+    # 使用 leafletProxy 更新地图，仅显示当前时间点的图标
+    leafletProxy("map", data = current_data) %>%
+      clearMarkers() %>%  # 清除所有现有标记
+      addMarkers(
+        lng = current_data$经度, 
+        lat = current_data$纬度, 
+        icon = icons(
+          iconUrl = typhoon_icon_url,  # 使用台风图标
+          iconWidth = 60,  # 图标宽度
+          iconHeight = ,  # 图标高度
+          iconAnchorX = 15,  # 图标锚点X
+          iconAnchorY = 30  # 图标锚点Y
+        ),
+        popup = paste(
+          "时间:", format(current_data$时间, "%Y-%m-%d %H:%M"),
+          "<br>风速:", current_data$风速, "m/s",
+          "<br>气压:", current_data$中心气压, "Pa",
+          "<br>移速:", current_data$移速, "级"
+        )
+      )
+  })
+  
+  # 计算播放速度的 observer
+  getPlaySpeed <- reactive({
+    input$int_speed + input$dec_speed
+  })
+  
+  # 自动播放的 observer
+  autoPlay <- reactive({
+    invalidateLater(getPlaySpeed() * 1000, session)  # 使用合并后的速度
+    input$play  # 当“播放”按钮被点击时触发
+  })
+  
+  observeEvent(autoPlay(), {
+    req(is_playing())  # 只有在播放状态下才会执行此操作
+    
+    # 循环直到超出数据的行数
+    current_index <- current_time_index()
+    if (current_index <= nrow(data)) {
+      updateSliderInput(session, "time_slider", value = current_index)  # 更新滑动条的值
+      current_time_index(current_index + 1)  # 增加当前时间点
+    } else {
+      current_time_index(1)  # 如果到达数据最后一项，重置为1
+    }
+  }, ignoreInit = TRUE)  # 确保初始点击不会触发
+  
+  # 点击播放按钮，开始播放
+  observeEvent(input$play, {
+    is_playing(TRUE)  # 设置为正在播放
+  })
+  
+  # 点击暂停按钮，暂停播放
+  observeEvent(input$stop, {
+    is_playing(FALSE)  # 设置为暂停状态
+  })
+  
+  # 点击重新播放按钮，重置时间点并开始播放
+  observeEvent(input$replay, {
+    is_playing(TRUE)  # 设置为播放状态
+    current_time_index(1)  # 重置当前时间点为 1
+    updateSliderInput(session, "time_slider", value = 1)  # 重置滑动条
+  })
+}
+generate_random_path <- function(start_lng, start_lat, n_points = 50, lng_variation = 0.2, lat_variation = 0.2) {
+  lng <- c(start_lng)
+  lat <- c(start_lat)
+  
+  for (i in 2:n_points) {
+    lng <- c(lng, lng[i-1] + runif(1, -lng_variation, lng_variation))  # 随机经度偏移
+    lat <- c(lat, lat[i-1] + runif(1, -lat_variation, lat_variation))  # 随机纬度偏移
+  }
+  
+  return(data.frame(经度 = lng, 纬度 = lat))
+}
+
+
+
+# 启动 Shiny 应用
+shinyApp(ui, server)
+
+
+
+```

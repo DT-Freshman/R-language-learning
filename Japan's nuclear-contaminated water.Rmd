@@ -1,0 +1,218 @@
+---
+title: "案例四：日本福岛核污水检测"
+author: "作者：吴清邦、宋攀、徐晨曦"
+date: "浏览时间：`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+runtime: shiny
+---
+
+# 背景：
+
+## 数据来源: <https://www.ied.tsukuba.ac.jp/database/00243.html>
+
+[日本福岛核污水入海](https://bkimg.cdn.bcebos.com/pic/8326cffc1e178a82b90126d98b4f648da9773912423f?x-bce-process=image/format,f_auto/watermark,image_d2F0ZXIvYmFpa2UyNzI,g_7,xp_5,yp_5,P_20/resize,m_lfit,limit_1,h_1080)
+
+[中日“核污水”达成共识，到底是谁在让步？](https://www.163.com/dy/article/JCKJTSOK0552RMWA.html)
+
+# ***日本核污水排放***
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+library(readr)
+library(dplyr)
+library(leaflet)
+# 读取数据
+file_path <- "D:/软件合集/DOI00238/DOI00238_data.csv"
+data <- read_csv(file_path)
+
+# 重命名列
+data <- data %>%
+  rename(
+    Sr90 = `Sr-90`,
+    Cs137 = `Cs-137`
+  )
+head(data)
+# 数据预处理：合并日期列，计算纬度和经度
+data <- data %>%
+  mutate(
+    # 合并日期
+    date = as.Date(paste(yyyy, mm, dd, sep = "-")),
+    # 计算纬度：纬度方向 (N/S) 决定正负
+    latitude = ifelse(LatDir == "N", LatD + LatM / 60, -(LatD + LatM / 60)),
+    # 计算经度：经度方向 (E/W) 决定正负
+    longitude = ifelse(LongDir == "E", LongD + LongM / 60, -(LongD + LongM / 60)),
+    # 转换数值列
+    Sr90 = as.numeric(gsub("[^0-9.]", "", Sr90)),
+    Cs137 = as.numeric(gsub("[^0-9.]", "", Cs137))
+  ) %>%
+  # 选择需要的列
+  select(date, latitude, longitude, sample_type = `sample_type`, Sr90, Cs137)
+
+
+library(leaflet)
+library(dplyr)
+
+leaflet(data) %>%
+  addTiles() %>%  # 添加默认地图底图
+  addRectangles(
+    ~longitude - 0.5, ~latitude - 0.2,  # 设置矩形的左下角坐标（可以通过调整偏移量来控制矩形大小）
+    ~longitude + 0.5, ~latitude + 0.2,  # 设置矩形的右上角坐标
+    color = "black",  # 设置边框颜色为黑色
+    weight = 1,  # 边框宽度
+    fillColor = "red",  # 填充颜色为红色
+    fillOpacity = 0.5,  # 填充透明度
+    dashArray = "5,5",  # 虚线边框
+    popup = ~paste0(
+      "<b>Date:</b> ", date, "<br>",
+      "<b>Sample Type:</b> ", sample_type, "<br>",
+      "<b>Sr-90:</b> ", Sr90, " ", ifelse(sample_type == "water", "mBq/L", "Bq/kg"), "<br>",  # 水样和土壤样本的单位不同
+      "<b>Cs-137:</b> ", Cs137, " ", ifelse(sample_type == "water", "mBq/L", "Bq/kg"), "<br>"
+    )  # 根据样本类型动态显示单位
+  ) %>%
+  addLegend(
+    position = "topright",  # 图例的位置
+    colors = "red",  # 图例颜色为红色
+    labels = "样本测量点",  # 图例标签
+    title = "2022 日本周边海水及海底土壤中人工放射性核素的监测"  # 图例标题
+  )
+```
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+library(readr)
+library(dplyr)
+library(leaflet)
+# 读取数据
+file_path <- "D:/软件合集/DOI00244/DOI00244_data.csv"
+data <- read_csv(file_path)
+
+# 重命名列
+data <- data %>%
+  rename(
+    Sr90 = `Sr-90`,
+    Cs137 = `Cs-137`
+  )
+head(data)
+# 数据预处理：合并日期列，计算纬度和经度
+data <- data %>%
+  mutate(
+    # 合并日期
+    date = as.Date(paste(yyyy, mm, dd, sep = "-")),
+    # 计算纬度：纬度方向 (N/S) 决定正负
+    latitude = ifelse(LatDir == "N", LatD + LatM / 60, -(LatD + LatM / 60)),
+    # 计算经度：经度方向 (E/W) 决定正负
+    longitude = ifelse(LongDir == "E", LongD + LongM / 60, -(LongD + LongM / 60)),
+    # 转换数值列
+    Sr90 = as.numeric(gsub("[^0-9.]", "", Sr90)),
+    Cs137 = as.numeric(gsub("[^0-9.]", "", Cs137))
+  ) %>%
+  # 选择需要的列
+  select(date, latitude, longitude, sample_type = `sample type`, Sr90, Cs137)
+
+
+library(leaflet)
+library(dplyr)
+
+leaflet(data) %>%
+  addTiles() %>%  # 添加默认地图底图
+  addRectangles(
+    ~longitude - 0.5, ~latitude - 0.2,  # 设置矩形的左下角坐标（可以通过调整偏移量来控制矩形大小）
+    ~longitude + 0.5, ~latitude + 0.2,  # 设置矩形的右上角坐标
+    color = "black",  # 设置边框颜色为黑色
+    weight = 1,  # 边框宽度
+    fillColor = "red",  # 填充颜色为红色
+    fillOpacity = 0.5,  # 填充透明度
+    dashArray = "5,5",  # 虚线边框
+    popup = ~paste0(
+      "<b>Date:</b> ", date, "<br>",
+      "<b>Sample Type:</b> ", sample_type, "<br>",
+      "<b>Sr-90:</b> ", Sr90, " ", ifelse(sample_type == "water", "mBq/L", "Bq/kg"), "<br>",  # 水样和土壤样本的单位不同
+      "<b>Cs-137:</b> ", Cs137, " ", ifelse(sample_type == "water", "mBq/L", "Bq/kg"), "<br>"
+    )  # 根据样本类型动态显示单位
+  ) %>%
+  addLegend(
+    position = "topright",  # 图例的位置
+    colors = "red",  # 图例颜色为红色
+    labels = "样本测量点",  # 图例标签
+    title = "2023 日本周边海水及海底土壤中人工放射性核素的监测"  # 图例标题
+  )
+```
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r,echo=FALSE}
+# 加载必要的库
+library(ggplot2)
+library(tidyverse)
+
+# 定义数据
+sr90_2022 <- c(0.84, 0.7, 0.71, 0.78, 0.79, 0.77, 0.74, 0.62, 0.75, 0.76, 
+               0.79, 0.7, 0.85, 0.74, 0.75, 0.77, 0.72, 0.76, 0.76, 0.79, 
+               0.82, 0.86, 0.77, 0.92, 0.87, 0.74, 0.83, 0.64, 0.54, 0.016)
+
+sr90_2023 <- c(0.74, 0.71, 0.71, 0.73, 0.68, 0.73, 0.9, 0.82, 1.1, 0.82, 
+               0.78, 0.68, 0.7, 0.69, 0.76, 0.64, 0.53, 0.75, 0.79, 0.67, 
+               0.76, 0.76, 0.88, 0.8, 0.76, 0.77, 0.84, 0.7, 0.84, 0.72)
+
+cs137_2022 <- c(1.6, 2, 1.9, 1.4, 1.3, 1.5, 1.3, 1.3, 1.1, 1.5, 1.3, 1.1, 
+                1.4, 1.3, 1.3, 1.6, 1.2, 1.6, 1.2, 1.3, 1.1, 1.1, 1.5, 1.6, 
+                1.3, 1.6, 1.7, 1.6, 1.1, 0.66)
+
+cs137_2023 <- c(2.3, 1.8, 1.3, 1.5, 1.2, 1.4, 1, 0.96, 1.3, 1.2, 1.4, 1.5, 
+                1.7, 1, 1.7, 1.5, 1.3, 1.4, 1.6, 1.5, 1.5, 1.6, 1.1, 1.4, 
+                2.2, 1.4, 1.3, 1.3, 1.4, 1.1)
+
+# 限制为前30个值
+time_points <- 1:30
+
+# 构造数据框
+data <- data.frame(
+  Time = factor(rep(time_points, 4)),  # 时间点重复 4 组
+  Isotope = rep(c("Sr-90", "Cs-137"), each = 2 * 30),  # 同位素类型
+  Year = rep(c("2022", "2023"), each = 30, times = 2),  # 年份
+  Value = c(sr90_2022, sr90_2023, cs137_2022, cs137_2023)  # 数据值
+)
+
+# 计算统计数据
+stats <- data %>%
+  group_by(Isotope, Year) %>%
+  summarise(
+    Total = sum(Value),
+    Mean = mean(Value),
+    .groups = "drop"
+  )
+
+# 计算增长百分比
+growth <- stats %>%
+  pivot_wider(names_from = Year, values_from = c(Total, Mean)) %>%
+  mutate(
+    Total_Growth = (Total_2023 - Total_2022) / Total_2022 * 100,
+    Mean_Growth = (Mean_2023 - Mean_2022) / Mean_2022 * 100
+  )
+
+# 打印统计数据
+print(stats)
+
+
+# 绘制柱状图
+ggplot(data, aes(x = Time, y = Value, fill = Year)) +
+  geom_bar(stat = "identity", position = "dodge") +  # 使用 dodge 分组显示
+  facet_wrap(~Isotope, scales = "free_y") +  # 按同位素类型分面显示
+  scale_fill_manual(values = c("2022" = "blue", "2023" = "red")) +  # 自定义颜色
+  labs(
+    title = "2022 vs 2023 Sr-90 和 Cs-137 数据对比（柱状图）",
+    x = "时间点",
+    y = "数据值",
+    fill = "年份"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # 标题居中
+    axis.text.x = element_text(angle = 45, hjust = 1)  # 调整 x 轴标签角度
+  )
+
+```

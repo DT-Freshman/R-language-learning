@@ -1,0 +1,231 @@
+---
+title: "华北电力大学及周边地标地图"
+author: "作者：DT-Freshman"
+date: "当前时间：`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+runtime: shiny
+---
+
+# 数据集来自：[USGS](https://earthquake.usgs.gov/earthquakes/map/?extent=-87.82409,645.46875&extent=87.79723,1275.46875&magnitude=all&settings=true)
+
+# 12月9日全球发生地震的位置
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+library(ggplot2)
+library(readr)
+
+# 读取地震数据
+data <- read_csv("D:/软件合集/all_week.csv")
+
+# 确保时间格式正确
+data$time <- as.POSIXct(data$time, format="%Y-%m-%d %H:%M:%S", tz = "UTC")
+
+# 使用ggplot2绘制区域图（面图）
+ggplot(data, aes(x = longitude, y = latitude)) +
+  # 调整geom_tile的宽度和高度来增大每个区域的面积
+  geom_tile(aes(fill = mag), width = 2, height = 2) +  # 增大宽度和高度
+  scale_fill_gradient(low = "yellow", high = "red", name = "震级") +
+  labs(title = "全球地震区域分布图", x = "经度", y = "纬度") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+library(shiny)
+library(leaflet)
+library(readr)
+library(dplyr)
+
+# 读取地震数据
+data <- read_csv("D:/吴清邦专业课的资料/数据可视化/R语言/2.5_day.csv")
+
+# 确保时间格式正确
+data$time <- as.POSIXct(data$time, format="%Y-%m-%d %H:%M:%S", tz = "UTC")
+
+# 创建 Shiny UI
+ui <- fluidPage(
+  titlePanel("全球地震位置可视化"),
+  
+  # 地图输出区域
+  leafletOutput("map"),
+  
+  # 用于显示时间和地点信息的面板
+  verbatimTextOutput("info")
+)
+
+# 服务器逻辑
+server <- function(input, output, session) {
+  
+  # 渲染 Leaflet 地图
+  output$map <- renderLeaflet({
+    # 创建 Leaflet 地图
+    leaflet(data) %>%
+      addTiles() %>%  # 添加地图底图
+      setView(lng = 0, lat = 0, zoom = 2) %>%  # 初始视图
+      addCircles(
+        lng = ~longitude, lat = ~latitude, 
+        radius = ~mag * 10000,  # 半径根据地震的 magnitude 动态调整
+        color = ~ifelse(mag >= 6, "red", ifelse(mag >= 4, "orange", "green")),  # 根据 magnitude 设置颜色
+        fillOpacity = 0.6,  # 填充不透明度
+        popup = ~paste0(
+          "<b>时间：</b>", format(time, "%Y-%m-%d %H:%M:%S"), "<br>",
+          "<b>地点：</b>", place, "<br>",
+          "<b>纬度：</b>", latitude, "°<br>",
+          "<b>经度：</b>", longitude, "°<br>",
+          "<b>深度：</b>", depth, " 公里", "<br>",
+          "<b>震级：</b>", mag
+        )
+      )
+  })
+  
+  # 输出信息
+  output$info <- renderText({
+    req(input$map_marker_click)  # 确保有点击事件
+    # 获取点击的标记信息
+    click <- input$map_marker_click
+    paste("你点击的地震信息：", 
+          "\n时间：", format(click$timestamp, "%Y-%m-%d %H:%M:%S"),
+          "\n地点：", click$popup,
+          sep = "")
+  })
+}
+
+# 启动 Shiny 应用
+shinyApp(ui = ui, server = server)
+```
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r,echo=FALSE}
+library(shiny)
+library(leaflet)
+library(readr)
+library(dplyr)
+
+# 读取地震数据
+data <- read_csv("D:/软件合集/all_week.csv")
+
+# 确保时间格式正确
+data$time <- as.POSIXct(data$time, format="%Y-%m-%d %H:%M:%S", tz = "UTC")
+
+# 创建 Shiny UI
+ui <- fluidPage(
+  titlePanel("全球地震位置可视化"),
+  
+  # 地图输出区域
+  leafletOutput("map"),
+  
+  # 用于显示时间和地点信息的面板
+  verbatimTextOutput("info")
+)
+
+# 服务器逻辑
+server <- function(input, output, session) {
+  
+  # 渲染 Leaflet 地图
+  output$map <- renderLeaflet({
+    # 创建 Leaflet 地图
+    leaflet(data) %>%
+      addTiles() %>%  # 添加地图底图
+      setView(lng = 0, lat = 0, zoom = 2) %>%  # 初始视图
+      addCircles(
+        lng = ~longitude, lat = ~latitude, 
+        radius = ~mag * 10000,  # 半径根据地震的 magnitude 动态调整
+        color = ~ifelse(mag >= 6, "#A91D1F", ifelse(mag >= 4, "red", "orange")),  # 根据 magnitude 设置颜色
+        fillOpacity = 0.6,  # 填充不透明度
+        popup = ~paste0(
+          "<b>时间：</b>", format(time, "%Y-%m-%d %H:%M:%S"), "<br>",
+          "<b>地点：</b>", place, "<br>",
+          "<b>纬度：</b>", latitude, "°<br>",
+          "<b>经度：</b>", longitude, "°<br>",
+          "<b>深度：</b>", depth, " 公里", "<br>",
+          "<b>震级：</b>", mag
+        )
+      )
+  })
+  
+  # 输出信息
+  output$info <- renderText({
+    req(input$map_marker_click)  # 确保有点击事件
+    # 获取点击的标记信息
+    click <- input$map_marker_click
+    paste("你点击的地震信息：", 
+          "\n时间：", format(click$timestamp, "%Y-%m-%d %H:%M:%S"),
+          "\n地点：", click$popup,
+          sep = "")
+  })
+}
+
+# 启动 Shiny 应用
+shinyApp(ui = ui, server = server)
+```
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+library(shiny)
+library(leaflet)
+library(leaflet.extras)
+library(readr)
+library(dplyr)
+
+# 读取地震数据
+data <- read_csv("D:/软件合集/all_week.csv")
+
+# 确保时间格式正确
+data$time <- as.POSIXct(data$time, format="%Y-%m-%d %H:%M:%S", tz = "UTC")
+
+# 设置震级颜色的调色板
+pal <- colorNumeric(palette = "YlOrRd", domain = data$mag)
+
+# 创建 Shiny UI
+ui <- fluidPage(
+  titlePanel("全球地震位置可视化"),
+  
+  # 地图输出区域
+  leafletOutput("map")
+)
+
+# 服务器逻辑
+server <- function(input, output, session) {
+  
+  # 渲染 Leaflet 地图
+  output$map <- renderLeaflet({
+    leaflet(data) %>% 
+      addProviderTiles(providers$CartoDB.Positron) %>%  # 添加底图
+      addCircles(
+        lng = ~longitude, lat = ~latitude, color = ~pal(mag),  # 根据震级设置圆的颜色
+        radius = ~mag * 2000,  # 根据震级设置圆的半径
+        label = ~paste("震级:", mag),  # 添加标签
+        stroke = FALSE, fillOpacity = 0.5  # 去掉边框，设置填充不透明度
+      ) %>% 
+      setView(lng = 0, lat = 0, zoom = 2) %>%  # 设置地图的初始视图
+      addHeatmap(
+        lng = ~longitude, lat = ~latitude, intensity = ~mag,  # 震级影响热力图的强度
+        blur = 20, max = 0.05, radius = 15  # 设置热力图的样式
+      ) %>%  
+      addLegend(
+        "bottomright", pal = pal, values = ~mag,  # 设置图例位置及颜色
+        title = "地震震级", opacity = 1
+      ) %>% 
+      addScaleBar(position = "bottomleft")  # 添加比例尺
+  })
+}
+
+# 启动 Shiny 应用
+shinyApp(ui = ui, server = server)
+
+```
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r}
+
+```

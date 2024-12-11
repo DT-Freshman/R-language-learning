@@ -1,0 +1,147 @@
+---
+title: "华北电力大学及周边地标地图及等高线图"
+author: "作者：吴清邦、宋攀、徐晨曦"
+date: "浏览时间：`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+runtime: shiny
+---
+
+## [数据来源:《R语言数据可视化之美》](https://github.com/EasyChart/Beautiful-Visualization-with-R/tree/master/%E7%AC%AC4%E7%AB%A0%20%E6%95%B0%E6%8D%AE%E5%85%B3%E7%B3%BB%E5%9E%8B%E5%9B%BE%E8%A1%A8)
+
+# ***1.等高线图***
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r centered-map1,  out.width = "100%", fig.align='center'}
+
+library(reshape2)
+library(ggplot2)
+library( directlabels)
+library(RColorBrewer)
+
+rf <- colorRampPalette(rev(brewer.pal(11,'Spectral')))
+colormap <- rf(32)
+
+z<-as.matrix(read.table("等高线.txt",header=TRUE))
+colnames(z)<-seq(1,ncol(z),by=1)
+head(z)
+max_z<-max(z)
+min_z<-min(z)
+breaks_lines<-seq(min(z),max(z),by=(max_z-min_z)/10)
+map<-melt(z)
+colnames(map)<-c("Var1","Var2","value")
+Contour<-ggplot(map,aes(x=Var1,y=Var2,z=value))+
+  geom_tile(aes(fill=value))+#根据高度填充
+  scale_fill_gradientn(colours=colormap)+
+  geom_contour(aes(colour= ..level..),breaks=breaks_lines,color="black")+#
+  labs(x="X轴",y="Y轴",fill="海拔高度")+
+  theme(
+    axis.title=element_text(size=15,face="plain",color="black"),
+    axis.text = element_text(size=13,face="plain",color="black"),
+    legend.title=element_text(size=13,face="plain",color="black"),
+    legend.text = element_text(size=11,face="plain",color="black"),
+    legend.background = element_blank(),
+    legend.position.inside  =c(0.15,0.2)
+  )
+Contour
+
+direct.label(Contour, list("bottom.pieces", cex=0.8, #"far.from.others.borders",
+                           fontface="plain", fontfamily="serif", colour='black'))
+```
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r centered-map2,  out.width = "100%", fig.align='center'}
+library(plotly)
+
+z_海拔高度 <- as.matrix(read.table("等高线.txt"))
+
+plot_ly(
+  z = ~z_海拔高度,
+  type = "surface",
+  colors = rf(32)
+) %>%
+  layout(
+    scene = list(
+      xaxis = list(title = "X轴"),
+      yaxis = list(title = "Y轴"),
+      zaxis = list(title = "海拔高度")
+    )
+  )
+
+```
+
+# ***2.华北电力大学二校区地图***
+
+<hr style="border: none; height: 4px; background-color: #ADD8E6; margin: 20px auto;">
+
+```{r centered-map-2, echo=FALSE, out.width = "100%", fig.align='center'}
+
+library(leaflet)
+
+# 定义地标数据
+locations <- data.frame(
+  name = c("华北电力大学二校区", "保定火车站", "华北电力大学数理系", "河北大学", "华北电力大学一校区"),
+  lat = c(38.89, 38.8633, 38.8865, 38.88, 38.8768),
+  lng = c(115.51, 115.47383, 115.507, 115.56, 115.499),
+  icon_url = c(
+    "https://th.bing.com/th/id/R.74033cd43358bc1031bd3f71288ac263?rik=AjPxYCmdGIDanw&riu=http%3a%2f%2fbbsimg.res.flyme.cn%2fforum%2f201510%2f04%2f155404hcd26qc30q5q20k7.jpg&ehk=TC9xOySs%2flXdLF3PJVNflM2SKKznNYnFkWfh44Z%2fjNs%3d&risl=&pid=ImgRaw&r=0",
+    "https://th.bing.com/th/id/OIP.Jyqzz2XDsY6GIHwbWIpeOAHaD0?rs=1&pid=ImgDetMain",
+    "https://th.bing.com/th/id/OIP.x9IdaK1mYEfrM4_2jQWLuQAAAA?rs=1&pid=ImgDetMain",
+    "https://th.bing.com/th/id/OIP.UJsD1Y4qDU47aa7vYCYHYgHaFj?rs=1&pid=ImgDetMain",
+    "https://img.pconline.com.cn/images/upload/upc/tx/photoblog/2011/01/c1/238348993_1604220261230_mthumb.jpg"
+  ),
+  popup_url = c(
+    "https://th.bing.com/th/id/R.74033cd43358bc1031bd3f71288ac263?rik=AjPxYCmdGIDanw&riu=http%3a%2f%2fbbsimg.res.flyme.cn%2fforum%2f201510%2f04%2f155404hcd26qc30q5q20k7.jpg&ehk=TC9xOySs%2flXdLF3PJVNflM2SKKznNYnFkWfh44Z%2fjNs%3d&risl=&pid=ImgRaw&r=0",
+    "https://th.bing.com/th/id/OIP.Jyqzz2XDsY6GIHwbWIpeOAHaD0?rs=1&pid=ImgDetMain",
+    "https://th.bing.com/th/id/OIP.x9IdaK1mYEfrM4_2jQWLuQAAAA?rs=1&pid=ImgDetMain",
+    "https://th.bing.com/th/id/OIP.UJsD1Y4qDU47aa7vYCYHYgHaFj?rs=1&pid=ImgDetMain",
+    "https://img.pconline.com.cn/images/upload/upc/tx/photoblog/2011/01/c1/238348993_1604220261230_mthumb.jpg"
+  )
+)
+
+# 创建 Leaflet 地图
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = 115.51, lat = 38.89, zoom = 15) %>%
+  
+  # 添加标记
+  addMarkers(
+    data = locations,
+    clusterOptions = markerClusterOptions(),  # 添加标记聚合
+    ~lng, ~lat,
+    popup = ~paste0(
+      "<b>", name, "</b><br>",
+      "<img src='", popup_url, "' width='300' height='200' style='cursor:pointer;' ",
+      "onmouseover=\"this.style.width='500px'; this.style.height='350px';\" ",
+      "onmouseout=\"this.style.width='300px'; this.style.height='200px';\">"
+    ),
+    icon = ~makeIcon(
+      iconUrl = icon_url,  # 动态指定小图标
+      iconWidth = 30,
+      iconHeight = 30
+    )
+  ) %>%
+  
+  # 添加比例尺和缩放控件
+  addScaleBar(position = "bottomright") %>%
+  
+  # 添加图例
+  addLegend(
+    position = "topright",
+    colors = c("blue", "green", "red", "purple", "orange"),  # 颜色与地标数量一致
+    labels = locations$name,  # 标签与地标名称一致
+    title = "重要地标",
+    opacity = 0.8
+  ) %>%
+  
+  # 添加小窗口
+  addMiniMap(
+    tiles = providers$Stamen.TonerLite,
+    toggleDisplay = TRUE
+  ) 
+  
+
+```
